@@ -1,0 +1,6 @@
+{
+  "name": "Balan E-Commerce Website",
+  "description": "A complete, professional full-stack e-commerce platform with catalog browsing, dynamic search & filtering, cart, Cash on Delivery checkout, order tracking, and admin management.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
