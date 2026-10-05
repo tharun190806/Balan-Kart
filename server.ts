@@ -24,7 +24,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const PORT = Number(process.env.PORT) || 3000;
-const isProduction = process.env.NODE_ENV === 'production';
+const isRender = process.env.RENDER === 'true';
+const isProduction = process.env.NODE_ENV === 'production' || isRender;
 
 async function startServer() {
   const app = express();
@@ -55,7 +56,7 @@ async function startServer() {
       service: 'BALAN E-COMMERCE API',
       timestamp: new Date().toISOString(),
       database: dbStatus,
-      environment: process.env.NODE_ENV || 'development',
+      environment: isProduction ? 'production' : 'development',
     });
   });
 
@@ -77,6 +78,12 @@ async function startServer() {
     });
   });
 
+  // Static Assets (makes generated product photos always accessible in both dev and production)
+  const srcAssetsPath = path.resolve(__dirname, 'src', 'assets');
+  if (fs.existsSync(srcAssetsPath)) {
+    app.use('/src/assets', express.static(srcAssetsPath));
+  }
+
   // Frontend Serving (Dev vs Production)
   if (!isProduction) {
     const { createServer: createViteServer } = await import('vite');
@@ -85,12 +92,28 @@ async function startServer() {
       appType: 'spa',
     });
     app.use(vite.middlewares);
+    console.log('[Balan Server] Development mode active with Vite middleware.');
   } else {
     const distPath = path.resolve(__dirname, 'dist');
+    const indexHtmlPath = path.resolve(distPath, 'index.html');
+
+    // If on Render or production but dist/ hasn't been built yet, build it automatically
+    if (!fs.existsSync(indexHtmlPath)) {
+      console.log('📦 [Balan Server] Building client bundle for production...');
+      try {
+        const { build } = await import('vite');
+        await build();
+        console.log('✅ [Balan Server] Client bundle built successfully.');
+      } catch (buildErr: any) {
+        console.error('⚠️ [Balan Server] Client build error:', buildErr.message);
+      }
+    }
+
     app.use(express.static(distPath));
     app.get('*', (_req, res) => {
-      res.sendFile(path.resolve(distPath, 'index.html'));
+      res.sendFile(indexHtmlPath);
     });
+    console.log('📦 [Balan Server] Production mode active: serving static client from dist/');
   }
 
   app.listen(PORT, '0.0.0.0', () => {
